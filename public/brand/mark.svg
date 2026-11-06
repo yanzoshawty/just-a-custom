@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="jac-mark-title">
+  <title id="jac-mark-title">Just a custom</title>
+  <!-- Two wheels with center marks and the wheelbase dimension: the first line of any bike drawing. -->
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
+    <circle cx="8" cy="22" r="6" stroke-width="2"/>
+    <circle cx="24" cy="22" r="6" stroke-width="2"/>
+    <path stroke-width="1.5" d="M6.5 22H9.5M8 20.5V23.5M22.5 22H25.5M24 20.5V23.5"/>
+    <path stroke-width="1.5" d="M8 4V13M24 4V13M11 8H21"/>
+  </g>
+  <path fill="currentColor" d="M8 8L11.5 6V10ZM24 8L20.5 6V10Z"/>
+</svg>

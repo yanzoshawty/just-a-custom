@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="jac-fav">
+  <!-- Standalone favicon copy of mark.svg: an <img>/favicon cannot inherit currentColor, so colors are fixed per scheme. Do not inline this file. -->
+  <style>.jac-fav{color:#16202B}@media (prefers-color-scheme:dark){.jac-fav{color:#E6ECEF}}</style>
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
+    <circle cx="8" cy="22" r="6" stroke-width="2"/>
+    <circle cx="24" cy="22" r="6" stroke-width="2"/>
+    <path stroke-width="1.5" d="M6.5 22H9.5M8 20.5V23.5M22.5 22H25.5M24 20.5V23.5"/>
+    <path stroke-width="1.5" d="M8 4V13M24 4V13M11 8H21"/>
+  </g>
+  <path fill="currentColor" d="M8 8L11.5 6V10ZM24 8L20.5 6V10Z"/>
+</svg>

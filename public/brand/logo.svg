@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 3 216 44" role="img" aria-labelledby="jac-logo-title">
+  <title id="jac-logo-title">Just a custom</title>
+  <!-- Technical-pen capitals on a 12-unit stadium grid; the A is a revision triangle (custom = revision of stock). -->
+  <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 6V24A6 6 0 0 1 0 24"/>
+    <path transform="translate(18 0)" d="M0 6V24A6 6 0 0 0 12 24V6"/>
+    <path transform="translate(36 0)" d="M11.2 9A6 6 0 1 0 6 18A6 6 0 1 1 0.8 27"/>
+    <path transform="translate(54 0)" d="M0 6H12M6 6V30"/>
+    <path class="jac-rev" transform="translate(80 0)" d="M0 30L6 6L12 30Z"/>
+    <path transform="translate(106 0)" d="M12 12A6 6 0 0 0 0 12V24A6 6 0 0 0 12 24"/>
+    <path transform="translate(124 0)" d="M0 6V24A6 6 0 0 0 12 24V6"/>
+    <path transform="translate(142 0)" d="M11.2 9A6 6 0 1 0 6 18A6 6 0 1 1 0.8 27"/>
+    <path transform="translate(160 0)" d="M0 6H12M6 6V30"/>
+    <path transform="translate(178 0)" d="M0 12A6 6 0 0 1 12 12V24A6 6 0 0 1 0 24Z"/>
+    <path transform="translate(196 0)" d="M0 30V6L7 20L14 6V30"/>
+  </g>
+  <!-- Overall dimension line under the wordmark -->
+  <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+    <path d="M0 35V45M210 35V45M7 41H203"/>
+  </g>
+  <path fill="currentColor" d="M0 41L7 38.5V43.5ZM210 41L203 38.5V43.5Z"/>
+</svg>

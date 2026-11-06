@@ -1,26 +1,376 @@
 @import "tailwindcss";
 
+/* Tokens: docs/DESIGN.md 3.2. Kalkir (light) default, Blueprint (dark) by system pref or explicit pick. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  color-scheme: light;
+  --paper: #e9ece6;
+  --paper-raised: #f6f7f3;
+  --paper-sunk: #dce1da;
+  --ink: #16202b;
+  --ink-muted: #4a5866;
+  --line-strong: #6e7c86;
+  --grid-minor: #d3d9d3;
+  --grid-major: #bcc5c0;
+  --accent: #b3361a;
+  --accent-hover: #9a2e15;
+  --on-accent: #f6f7f3;
+  --scrim: rgb(22 32 43 / 0.55);
+  --gutter: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0f2a44;
+    --paper-raised: #14365a;
+    --paper-sunk: #0b2238;
+    --ink: #e6ecef;
+    --ink-muted: #9fb3c4;
+    --line-strong: #6a8aa6;
+    --grid-minor: #173857;
+    --grid-major: #22496f;
+    --accent: #ff7a52;
+    --accent-hover: #ff916f;
+    --on-accent: #0f2a44;
+    --scrim: rgb(11 34 56 / 0.72);
   }
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0f2a44;
+  --paper-raised: #14365a;
+  --paper-sunk: #0b2238;
+  --ink: #e6ecef;
+  --ink-muted: #9fb3c4;
+  --line-strong: #6a8aa6;
+  --grid-minor: #173857;
+  --grid-major: #22496f;
+  --accent: #ff7a52;
+  --accent-hover: #ff916f;
+  --on-accent: #0f2a44;
+  --scrim: rgb(11 34 56 / 0.72);
+}
+
+@media (min-width: 640px) {
+  :root { --gutter: 24px; }
+}
+@media (min-width: 1024px) {
+  :root { --gutter: 48px; }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-sunk: var(--paper-sunk);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --font-display: var(--font-barlow-condensed);
+  --font-body: var(--font-barlow);
+  --font-mono: var(--font-plex-mono);
+  --spacing-gutter: var(--gutter);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Drafting surface (DESIGN 5.2): the grid is the brand's paper, not filler. */
+body,
+.grid-paper {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-barlow), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  background-position: -1px -1px;
+}
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: clip;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Lenis (landing only) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+@layer components {
+  .t-display {
+    font-family: var(--font-barlow-condensed), sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.75rem, 1.6rem + 5.2vw, 6rem);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+  }
+  .t-h2 {
+    font-family: var(--font-barlow-condensed), sans-serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 1.4rem + 2.6vw, 3.5rem);
+    line-height: 1;
+  }
+  .t-h3 {
+    font-family: var(--font-barlow-condensed), sans-serif;
+    font-weight: 600;
+    font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.625rem);
+    line-height: 1.1;
+  }
+  .t-body-lg {
+    font-size: 1.1875rem;
+    line-height: 1.55;
+  }
+  .t-label {
+    font-family: var(--font-plex-mono), monospace;
+    font-weight: 500;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  .t-data {
+    font-family: var(--font-plex-mono), monospace;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  /* Solid plate: muted/accent body text never sits on bare grid (DESIGN 3.4). */
+  .plate {
+    background: var(--paper-raised);
+    border: 1px solid var(--ink);
+  }
+  .plate-thick {
+    background: var(--paper-raised);
+    border: 2px solid var(--ink);
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 20px;
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    box-shadow: 4px 4px 0 0 var(--ink);
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 80ms ease-out, box-shadow 80ms ease-out, background-color 120ms ease-out;
+  }
+  .btn-primary:hover {
+    background: var(--accent-hover);
+  }
+  .btn-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 0 var(--ink);
+  }
+  .btn-primary:disabled,
+  .btn-primary[aria-busy="true"] {
+    background: var(--paper-sunk);
+    color: var(--ink-muted);
+    border-color: var(--line-strong);
+    box-shadow: none;
+    transform: none;
+    cursor: default;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 18px;
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .btn-secondary:hover {
+    background: var(--paper-sunk);
+  }
+  .btn-secondary:disabled {
+    color: var(--ink-muted);
+    border-color: var(--line-strong);
+    cursor: default;
+  }
+
+  /* Small toolbar buttons: 44px targets, 1px border. */
+  .btn-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    background: var(--paper-raised);
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .btn-tool:hover {
+    background: var(--paper-sunk);
+  }
+  .btn-tool[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    background: var(--paper-raised);
+    color: var(--ink);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+  }
+  .chip:hover {
+    border-color: var(--ink);
+  }
+  .chip[aria-checked="true"],
+  .chip[aria-selected="true"] {
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    padding: 0 13px;
+  }
+
+  .link {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .field {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 12px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    color: var(--ink);
+    font-size: 1rem;
+  }
+  .field:focus-visible {
+    border: 2px solid var(--ink);
+    padding: 0 11px;
+  }
+  .field[aria-invalid="true"] {
+    border: 2px solid var(--accent);
+    padding: 0 11px;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -100px;
+  z-index: 50;
+  padding: 12px 16px;
+  background: var(--paper-raised);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font-weight: 600;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* Theme button label follows the active theme without JS. */
+.when-dark { display: none; }
+:root[data-theme="dark"] .when-dark { display: inline; }
+:root[data-theme="dark"] .when-light { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .when-dark { display: inline; }
+  :root:not([data-theme="light"]) .when-light { display: none; }
+}
+
+/* Garage on phone/tablet: keep focused rail controls clear of the sticky canvas (WCAG 2.4.11). */
+.garage-rail * {
+  scroll-margin-top: calc(max(45dvh, 280px) + 64px);
+  scroll-margin-bottom: 16px;
+}
+@media (min-width: 640px) {
+  .garage-rail * { scroll-margin-top: calc(max(52dvh, 280px) + 72px); }
+}
+@media (min-width: 1024px) {
+  .garage-rail * { scroll-margin-top: 16px; }
+}
+
+dialog::backdrop {
+  background: var(--scrim);
+}
+
+/* M2-style draw-in for the loading ground line */
+.draw-in {
+  transform-origin: left center;
+  animation: draw-in 900ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+@keyframes draw-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-secondary {
+    transition: none;
+  }
+  .draw-in {
+    animation: none;
+  }
 }
