@@ -5,7 +5,8 @@
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, Line } from "@react-three/drei";
+import { Line } from "@react-three/drei";
+import { ScreenLabel } from "./ScreenLabel";
 import type { BuildConfig } from "@/lib/build-schema";
 import type { GroupId } from "@/lib/catalog";
 import { Bike, BIKE_DPR, type BikeMode } from "./bike/Bike";
@@ -161,11 +162,11 @@ function HeroDimension() {
           <shapeGeometry args={[arrow]} />
           <meshBasicMaterial color={tokens.ink} side={THREE.DoubleSide} transparent />
         </mesh>
-        <Html position={[0, -0.14, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: "none" }}>
+        <ScreenLabel position={[0, -0.14, 0]} center>
           <div ref={label} aria-hidden="true" className="t-label translate-y-3 bg-paper px-1.5 whitespace-nowrap text-ink" style={{ opacity: 0 }}>
             Jarak sumbu roda
           </div>
-        </Html>
+        </ScreenLabel>
       </group>
     </>
   );

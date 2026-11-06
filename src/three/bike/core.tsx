@@ -3,7 +3,8 @@
 import * as THREE from "three";
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree, type ThreeElements } from "@react-three/fiber";
-import { Edges, Html, Line, type EdgesRef } from "@react-three/drei";
+import { Edges, Line, type EdgesRef } from "@react-three/drei";
+import { ScreenLabel } from "../ScreenLabel";
 import type { Finish, GroupId } from "@/lib/catalog";
 
 export type V3 = [number, number, number];
@@ -382,7 +383,7 @@ function Callout({
         </mesh>
         <Line points={[def.anchor, elbow, end]} color={color} lineWidth={active ? 2 : 1} raycast={() => null} />
       </group>
-      <Html position={end} zIndexRange={[5, 0]} style={{ pointerEvents: "none" }}>
+      <ScreenLabel position={end}>
         <div
           ref={plateRef}
           aria-hidden="true"
@@ -398,7 +399,7 @@ function Callout({
           </div>
           <div className="text-sm font-medium text-ink">{def.name}</div>
         </div>
-      </Html>
+      </ScreenLabel>
     </>
   );
 }
