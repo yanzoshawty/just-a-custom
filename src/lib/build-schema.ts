@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Skip zod's `new Function` feature probe, which the CSP blocks and reports (audit-001 #11).
+z.config({ jitless: true });
+
 // Shared contract between configurator (frontend) and /api/builds (backend). Change both sides together.
 
 export const PART_OPTIONS = {

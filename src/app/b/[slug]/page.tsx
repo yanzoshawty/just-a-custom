@@ -40,6 +40,8 @@ export async function generateMetadata({ params }: PageProps<"/b/[slug]">): Prom
   return {
     title: `${name} | Just a custom`,
     description: builder ? `Build ${style} oleh ${builder}` : `Build ${style}`,
+    // Builds are shared by link, not published: keep user-written titles out of search (audit-001 #5).
+    robots: { index: false },
   };
 }
 

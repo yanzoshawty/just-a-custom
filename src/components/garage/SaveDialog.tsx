@@ -116,14 +116,11 @@ export function SaveDialog({ open, onClose, config, initialName, onSaved }: Prop
         requestAnimationFrame(() => urlInput.current?.focus());
         return;
       }
-      const body = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        issues?: { fieldErrors?: Record<string, string[] | undefined> };
-      };
+      const body = (await res.json().catch(() => ({}))) as { error?: string; fields?: string[] };
       if (res.status === 400) {
-        const fe = body.issues?.fieldErrors ?? {};
-        if (fe.name) setNameError(name.trim() ? BAD_CHARS : NAME_EMPTY);
-        if (fe.builder) setBuilderError(b.length > 40 ? "Maksimal 40 huruf." : BAD_CHARS);
+        const fields = body.fields ?? [];
+        if (fields.includes("name")) setNameError(name.trim() ? BAD_CHARS : NAME_EMPTY);
+        if (fields.includes("builder")) setBuilderError(b.length > 40 ? "Maksimal 40 huruf." : BAD_CHARS);
         setFailure("invalid");
       } else if (res.status === 429) setFailure("rate");
       else if (res.status === 503 && body.error === "backend_not_configured") setFailure("backend");
@@ -258,7 +255,8 @@ export function SaveDialog({ open, onClose, config, initialName, onSaved }: Prop
               )}
             </div>
             <p className="mt-4 text-sm text-ink-muted">
-              Tiap simpan bikin link baru. Link lama tetap menampilkan versi lamanya.
+              Tiap simpan bikin link baru. Link lama tetap menampilkan versi lamanya. Siapa pun yang punya link bisa
+              melihat build ini.
             </p>
           </form>
         ) : (

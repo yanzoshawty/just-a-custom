@@ -10,13 +10,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   try {
     const build = await getBuild(slug);
     if (!build) return notFound();
-    // Builds are never updated, so a slug's response never changes.
-    return Response.json(build, { headers: { "Cache-Control": "public, max-age=31536000, immutable" } });
+    // Builds are never edited, but can be deleted (takedown), so caches must expire (audit-001 #5).
+    return Response.json(build, { headers: { "Cache-Control": "public, max-age=3600" } });
   } catch (err) {
+    const noStore = { "Cache-Control": "no-store" };
     if (err instanceof BackendNotConfiguredError) {
-      return Response.json({ error: "backend_not_configured" }, { status: 503 });
+      return Response.json({ error: "backend_not_configured" }, { status: 503, headers: noStore });
     }
     console.error("[GET /api/builds/[slug]]", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: "internal_error" }, { status: 500, headers: noStore });
   }
 }

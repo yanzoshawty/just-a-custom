@@ -40,7 +40,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 Saving and sharing builds uses Supabase (Postgres). Without it the configurator still works; save/share returns 503 `backend_not_configured`.
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migration `supabase/migrations/0001_builds.sql`, either:
+2. Run the migrations in order, `0001_builds.sql` then `0002_builds_insert_cap.sql` from `supabase/migrations/`, either:
    - paste it into Dashboard > SQL Editor and run it, or
    - with the Supabase CLI: `supabase link --project-ref <ref>` then `supabase db push`.
 3. Copy `.env.example` to `.env.local` and set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Dashboard > Project Settings > API). Set the same two variables in your host (e.g. Vercel) for deploys. Never expose the service role key with a `NEXT_PUBLIC_` prefix.
@@ -48,7 +48,15 @@ Saving and sharing builds uses Supabase (Postgres). Without it the configurator 
 
 API:
 
-- `POST /api/builds` with `Content-Type: application/json`, body `{ name, builder?, config }` (max 8 KB) returns `201` with the saved build. Errors: `400 invalid_json | invalid_build` (with `issues`), `413`, `415`, `429` (10/min per IP), `503`, `500`.
-- `GET /api/builds/<slug>` returns `200` with the saved build (cached as immutable), or `404 not_found`, `503`, `500`.
+- `POST /api/builds` with `Content-Type: application/json`, body `{ name, builder?, config }` (max 8 KB) returns `201` with the saved build. Errors: `400 invalid_json | invalid_build` (with `fields`, the names of the invalid fields), `413`, `415`, `429` (10/min per IP on Vercel, plus a global cap of 1000 saves per hour), `503`, `500`.
+- `GET /api/builds/<slug>` returns `200` with the saved build (cached for 1 hour), or `404 not_found`, `503`, `500`.
 
 The `builds` table has RLS on and no policies: only the server (service role) reads and writes it.
+
+### Operations
+
+- **Builds are unlisted, not private.** Anyone with the link can open a build. Build pages are `noindex`, so they stay out of search engines.
+- **Taking a build down:** run `delete from public.builds where slug = '<slug>';` in the Supabase SQL Editor. `/b/<slug>` stops showing it right away; `GET /api/builds/<slug>` can stay in browser caches for up to 1 hour.
+- **Insert cap:** `0002_builds_insert_cap.sql` allows 1000 saves per hour across all instances. Raise the number in that function if real traffic gets close.
+- **If read traffic gets abusive:** add a Vercel Firewall rate-limit rule on `/api/builds/*` and `/b/*` (dashboard, no code change). Don't cache 404s publicly, or builds created later would keep showing "not found".
+- **Per-IP limit** uses `x-vercel-forwarded-for`, so it only applies on Vercel. On other hosts only the global cap applies.

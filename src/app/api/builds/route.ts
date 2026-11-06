@@ -7,13 +7,19 @@ const MAX_BODY_BYTES = 8 * 1024;
 const RATE_LIMIT = 10; // saves per IP per window
 const RATE_WINDOW_MS = 60_000;
 
-// shortcut: in-memory per-instance limit, move to Upstash/DB when deployed on multiple instances
+// shortcut: in-memory per-instance limit, move to Upstash/DB when deployed on multiple instances.
+// The global hourly cap in 0002_builds_insert_cap.sql is the real backstop.
 const hits = new Map<string, { count: number; resetAt: number }>();
+const MAX_KEYS = 10_000;
 
 /** Returns seconds until retry when over the limit, else null. */
 function rateLimit(ip: string): number | null {
   const now = Date.now();
-  if (hits.size > 10_000) for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+  if (hits.size > MAX_KEYS) {
+    for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+    // Still full means a key flood inside one window: drop everything rather than walk the map every request.
+    if (hits.size > MAX_KEYS) hits.clear();
+  }
   const entry = hits.get(ip);
   if (!entry || entry.resetAt <= now) {
     hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
@@ -51,8 +57,11 @@ export async function POST(req: Request) {
     return fail(415, "unsupported_media_type");
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
-  const retryAfter = rateLimit(ip);
+  // Vercel sets x-vercel-forwarded-for itself and overwrites client-sent forwarding headers, so it is the
+  // only trustworthy IP source. Off Vercel there is no trusted IP: skip the per-IP limit instead of letting
+  // a spoofable header or one shared "unknown" bucket decide (audit-001 #3).
+  const ip = req.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim();
+  const retryAfter = ip ? rateLimit(ip) : null;
   if (retryAfter !== null) return fail(429, "rate_limited", undefined, { "Retry-After": String(retryAfter) });
 
   const raw = await readCapped(req, MAX_BODY_BYTES);
@@ -66,7 +75,8 @@ export async function POST(req: Request) {
   }
 
   const parsed = CreateBuildSchema.safeParse(json);
-  if (!parsed.success) return fail(400, "invalid_build", { issues: z.flattenError(parsed.error) });
+  // Only field names, not zod's messages (audit-001 #7). SaveDialog reads `fields`.
+  if (!parsed.success) return fail(400, "invalid_build", { fields: Object.keys(z.flattenError(parsed.error).fieldErrors) });
 
   try {
     return Response.json(await createBuild(parsed.data), { status: 201 });
