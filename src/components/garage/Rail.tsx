@@ -3,16 +3,27 @@
 import { useId, useState } from "react";
 import { PART_OPTIONS, type BuildConfig, type PartKey } from "@/lib/build-schema";
 import {
+  BASE_NAMES,
+  BASE_NOTES,
+  BASES,
   FINISH_NAMES,
+  FINISHES,
   GROUPS,
   HEX_RE,
   OPTION_NAMES,
+  PART_KEY_LABEL,
+  SECTIONS,
+  STYLE_BLURB,
   STYLE_NAMES,
   STYLES,
   SWATCHES,
+  clashesFor,
+  partLabel,
   swatchName,
+  type Base,
   type Finish,
   type GroupId,
+  type SectionId,
   type Style,
 } from "@/lib/catalog";
 import { RadioGroup } from "@/components/ui/RadioGroup";
@@ -20,17 +31,35 @@ import { RadioGroup } from "@/components/ui/RadioGroup";
 type PartsProps = {
   config: BuildConfig;
   onStyle: (s: Style) => void;
+  /** Basis motor picker; hidden when the host does not handle it. */
+  onBase?: (b: Base) => void;
   onPart: (k: PartKey, v: string) => void;
   onActive: (g: GroupId) => void;
+  /** The group whose section starts expanded. */
   open: GroupId;
   onOpen: (g: GroupId) => void;
 };
 
-export function PartsPanel({ config, onStyle, onPart, onActive, open, onOpen }: PartsProps) {
+const sectionOf = (g: GroupId) => GROUPS.find((x) => x.id === g)!.section;
+
+export function PartsPanel({ config, onStyle, onBase, onPart, onActive, open, onOpen }: PartsProps) {
   const id = useId();
+  const [expanded, setExpanded] = useState<Set<SectionId>>(() => new Set([sectionOf(open)]));
+  const clashes = clashesFor(config);
+  const clashSet = new Set(clashes.map((c) => `${c.key}:${c.id}`));
+  const toggle = (sec: SectionId) => {
+    const next = new Set(expanded);
+    if (next.has(sec)) next.delete(sec);
+    else {
+      next.add(sec);
+      onOpen(GROUPS.find((x) => x.section === sec)!.id);
+    }
+    setExpanded(next);
+  };
+
   return (
     <div className="flex flex-col gap-8">
-      <section aria-labelledby={`${id}-aliran`}>
+      <section aria-labelledby={`${id}-aliran`} data-tour="style">
         <h3 id={`${id}-aliran`} className="t-h3 mb-3">
           Aliran
         </h3>
@@ -42,64 +71,86 @@ export function PartsPanel({ config, onStyle, onPart, onActive, open, onOpen }: 
           className="grid grid-cols-2 gap-2"
           render={(s) => ({ content: STYLE_NAMES[s] })}
         />
+        <p className="mt-3 text-sm text-ink-muted">{STYLE_BLURB[config.style]}</p>
       </section>
 
-      <div className="flex flex-col gap-8 max-sm:gap-0 max-sm:border-t max-sm:border-ink">
-        {GROUPS.map((g) => {
-          const expanded = open === g.id;
-          const current = g.keys.map((k) => OPTION_NAMES[config.parts[k]]).join(", ");
-          const headId = `${id}-${g.id}`;
-          const bodyId = `${id}-${g.id}-body`;
+      {onBase && (
+        <section aria-labelledby={`${id}-basis`} data-tour="base">
+          <h3 id={`${id}-basis`} className="t-h3 mb-3">
+            Basis motor
+          </h3>
+          <RadioGroup
+            options={BASES}
+            value={config.base}
+            onChange={onBase}
+            labelledBy={`${id}-basis`}
+            className="flex flex-wrap gap-2"
+            render={(b) => ({ content: BASE_NAMES[b] })}
+          />
+          <p className="mt-3 text-sm text-ink-muted">{BASE_NOTES[config.base]}</p>
+        </section>
+      )}
+
+      {/* soft style rule (report "do not include" lists): warns, never blocks, so hybrids stay possible */}
+      <p role="status" aria-live="polite" className={clashes.length ? "border-2 border-ink bg-paper-raised p-3 text-sm" : "sr-only"}>
+        {clashes.length > 0 &&
+          `Keluar pakem ${STYLE_NAMES[config.style]}: ${clashes
+            .map((c) => (c.key === "finish" ? `cat ${FINISH_NAMES[config.paint.finish]}` : `${PART_KEY_LABEL[c.key]} ${OPTION_NAMES[c.id]}`))
+            .join(", ")}. Boleh, asal disengaja.`}
+      </p>
+
+      <div className="flex flex-col border-t border-ink">
+        {SECTIONS.map((sec) => {
+          const isOpen = expanded.has(sec.id);
+          const groups = GROUPS.filter((g) => g.section === sec.id);
+          const bodyId = `${id}-${sec.id}-body`;
           return (
-            <section
-              key={g.id}
-              aria-labelledby={headId}
-              onFocus={() => onActive(g.id)}
-              onPointerEnter={() => onActive(g.id)}
-              className="max-sm:border-b max-sm:border-ink"
-            >
-              {/* phone: accordion header; wider: plain heading row */}
-              <h3 className="sm:hidden">
+            <section key={sec.id} aria-labelledby={`${id}-${sec.id}`} className="border-b border-ink">
+              <h3 id={`${id}-${sec.id}`}>
                 <button
                   type="button"
-                  aria-expanded={expanded}
+                  aria-expanded={isOpen}
                   aria-controls={bodyId}
-                  onClick={() => {
-                    onOpen(g.id);
-                    onActive(g.id);
-                  }}
+                  onClick={() => toggle(sec.id)}
                   className="flex min-h-12 w-full items-center gap-3 py-2 text-left"
                 >
-                  <span className="t-label text-ink-muted">{g.no}</span>
-                  <span className="t-h3 flex-1">{g.heading}</span>
-                  <span className="text-sm text-ink-muted">{current}</span>
+                  <span className="t-h3 flex-1">{sec.label}</span>
+                  <span className="text-sm text-ink-muted">{groups.reduce((n, g) => n + g.keys.length, 0)} part</span>
                   <span aria-hidden="true" className="t-data w-4 text-center">
-                    {expanded ? "−" : "+"}
+                    {isOpen ? "−" : "+"}
                   </span>
                 </button>
               </h3>
-              <div className="mb-3 hidden items-baseline gap-3 sm:flex">
-                <span className="t-label text-ink-muted">{g.no}</span>
-                <h3 id={headId} className="t-h3 flex-1">
-                  {g.heading}
-                </h3>
-                <span className="text-right text-sm text-ink-muted">{current}</span>
-              </div>
-              <div id={bodyId} className={`${expanded ? "" : "max-sm:hidden"} max-sm:pb-4`}>
-                {g.keys.length === 1 ? (
-                  <OptionChips k={g.keys[0]} value={config.parts[g.keys[0]]} onPart={onPart} labelledBy={headId} />
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {g.keys.map((k) => (
-                      <div key={k}>
-                        <div id={`${headId}-${k}`} className="mb-2 text-sm font-medium">
-                          {k === "wheels" ? "Pelek" : "Ban"}
-                        </div>
-                        <OptionChips k={k} value={config.parts[k]} onPart={onPart} labelledBy={`${headId}-${k}`} />
+              <div id={bodyId} hidden={!isOpen} className="flex flex-col gap-6 pt-2 pb-6">
+                {groups.map((g) => {
+                  const headId = `${id}-${g.id}`;
+                  const current = g.keys.map((k) => OPTION_NAMES[config.parts[k]]).join(", ");
+                  return (
+                    <div key={g.id} role="group" aria-labelledby={headId} onFocus={() => onActive(g.id)} onPointerEnter={() => onActive(g.id)}>
+                      <div className="mb-3 flex items-baseline gap-3">
+                        <span className="t-label text-ink-muted">{g.no}</span>
+                        <h4 id={headId} className="flex-1 font-semibold">
+                          {g.heading}
+                        </h4>
+                        <span className="text-right text-sm text-ink-muted">{current}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {g.keys.length === 1 ? (
+                        <OptionChips k={g.keys[0]} value={config.parts[g.keys[0]]} onPart={onPart} labelledBy={headId} clash={clashSet} />
+                      ) : (
+                        <div className="flex flex-col gap-4">
+                          {g.keys.map((k) => (
+                            <div key={k}>
+                              <div id={`${headId}-${k}`} className="mb-2 text-sm font-medium">
+                                {partLabel(g, k)}
+                              </div>
+                              <OptionChips k={k} value={config.parts[k]} onPart={onPart} labelledBy={`${headId}-${k}`} clash={clashSet} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </section>
           );
@@ -109,7 +160,19 @@ export function PartsPanel({ config, onStyle, onPart, onActive, open, onOpen }: 
   );
 }
 
-function OptionChips({ k, value, onPart, labelledBy }: { k: PartKey; value: string; onPart: PartsProps["onPart"]; labelledBy: string }) {
+function OptionChips({
+  k,
+  value,
+  onPart,
+  labelledBy,
+  clash,
+}: {
+  k: PartKey;
+  value: string;
+  onPart: PartsProps["onPart"];
+  labelledBy: string;
+  clash: Set<string>;
+}) {
   return (
     <RadioGroup
       options={PART_OPTIONS[k] as readonly string[]}
@@ -117,7 +180,11 @@ function OptionChips({ k, value, onPart, labelledBy }: { k: PartKey; value: stri
       onChange={(v) => onPart(k, v)}
       labelledBy={labelledBy}
       className="flex flex-wrap gap-2"
-      render={(v) => ({ content: OPTION_NAMES[v] })}
+      render={(v) => {
+        const off = clash.has(`${k}:${v}`);
+        // dashed border marks the picked option that breaks the style's rule
+        return { content: OPTION_NAMES[v], label: off ? `${OPTION_NAMES[v]}, keluar pakem aliran` : undefined, className: off ? "chip border-dashed" : "chip" };
+      }}
     />
   );
 }
@@ -151,7 +218,7 @@ export function PaintPanel({
           Finish
         </h3>
         <RadioGroup
-          options={["gloss", "matte", "metal"] as const}
+          options={FINISHES}
           value={paint.finish}
           onChange={onFinish}
           labelledBy={`${id}-finish`}

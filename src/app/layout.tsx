@@ -45,6 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="id" suppressHydrationWarning className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* the drafting loader is ended by JS; without JS it must never cover the page */}
+        <noscript>
+          <style>{`.draft-loader{display:none!important}`}</style>
+        </noscript>
       </head>
       <body className="flex min-h-dvh flex-col antialiased">{children}</body>
     </html>

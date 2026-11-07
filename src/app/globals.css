@@ -260,6 +260,26 @@ html.lenis body {
     border: 2px solid var(--ink);
   }
 
+  /* Inverted step button (tour): solid ink, so the meni accent stays reserved for the main CTAs. */
+  .btn-ink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .btn-ink:hover {
+    background: var(--ink-muted);
+    border-color: var(--ink-muted);
+  }
+
   .chip {
     display: inline-flex;
     align-items: center;
@@ -365,6 +385,30 @@ dialog::backdrop {
   to { transform: scaleX(1); }
 }
 
+/* Drafting loader (DESIGN 8, L1 to L4). Strokes start undrawn so the SSR frame is the empty sheet. */
+.dl-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.dl-fade {
+  opacity: 0;
+}
+
+/* Tour coachmark (M23): frame and plate glide between targets only while a step changes. */
+.tour-glide {
+  transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1), width 380ms cubic-bezier(0.16, 1, 0.3, 1), height 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Aliran card in the pinned walk (M16): the card in the active slot lifts off the sheet. */
+.aliran-card {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.aliran-card[data-active="true"] {
+  transform: translateY(-10px);
+  border-width: 2px;
+  border-color: var(--ink);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn-primary,
   .btn-secondary {
@@ -372,5 +416,15 @@ dialog::backdrop {
   }
   .draw-in {
     animation: none;
+  }
+  .dl-stroke {
+    stroke-dashoffset: 0;
+  }
+  .dl-fade {
+    opacity: 1;
+  }
+  .tour-glide,
+  .aliran-card {
+    transition: none;
   }
 }

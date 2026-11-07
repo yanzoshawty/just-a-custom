@@ -38,61 +38,14 @@ One row: mark (24px) + "Just a custom" + the line "Gambar di sini bukan gambar k
 
 ## 2. Shared content tables (single source for every page)
 
-### 2.1 Part order, numbers, names
+### 2.1 to 2.3 Parts, names, styles, bases, presets (v2)
 
-| No. | Mono label | Schema key(s) | Rail heading |
-|---|---|---|---|
-| 01 | RANGKA | `frame` | Rangka (frame) |
-| 02 | TANGKI | `tank` | Tangki (tank) |
-| 03 | JOK | `seat` | Jok (seat) |
-| 04 | STANG | `handlebar` | Stang (handlebar) |
-| 05 | RODA & BAN | `wheels`, `tires` | Roda & ban (two radio groups: "Pelek" and "Ban") |
-| 06 | KNALPOT | `exhaust` | Knalpot (exhaust) |
-| 07 | MESIN | `engine` | Mesin (engine) |
+The single source is `src/lib/catalog.ts` (tested in `catalog.test.ts`); this spec no longer copies the tables.
 
-### 2.2 Option display names
-
-| Key | id | Display name |
-|---|---|---|
-| frame | cradle | Double cradle |
-| frame | trellis | Trellis |
-| frame | hardtail | Hardtail |
-| engine | single | Single silinder |
-| engine | parallel-twin | Parallel twin |
-| engine | v-twin | V-twin |
-| tank | teardrop | Teardrop |
-| tank | peanut | Peanut |
-| tank | flat-box | Flat box |
-| seat | cafe-hump | Cafe hump |
-| seat | bobber-solo | Solo bobber |
-| seat | brat-flat | Brat flat |
-| exhaust | low-pipe | Low pipe |
-| exhaust | high-scrambler | High pipe scrambler |
-| exhaust | fishtail | Fishtail |
-| handlebar | clip-on | Clip-on |
-| handlebar | drag | Drag bar |
-| handlebar | tracker | Tracker bar |
-| wheels | spoke | Jari-jari |
-| wheels | cast | Racing (cast) |
-| wheels | disc | Disc cover |
-| tires | street | Street |
-| tires | knobby | Pacul (knobby) |
-| finish | gloss | Kilap |
-| finish | matte | Doff |
-| finish | metal | Metalik |
-
-Style labels: `cafe-racer` Cafe racer, `bobber` Bobber, `scrambler` Scrambler, `brat` Brat.
-
-### 2.3 Style presets (choosing a style applies these parts; paint is left untouched)
-
-| Style | frame | engine | tank | seat | exhaust | handlebar | wheels | tires |
-|---|---|---|---|---|---|---|---|---|
-| cafe-racer | cradle | parallel-twin | teardrop | cafe-hump | low-pipe | clip-on | spoke | street |
-| bobber | hardtail | v-twin | peanut | bobber-solo | fishtail | drag | spoke | street |
-| scrambler | cradle | single | peanut | brat-flat | high-scrambler | tracker | spoke | knobby |
-| brat | trellis | parallel-twin | flat-box | brat-flat | low-pipe | tracker | cast | street |
-
-`cafe-racer` equals `DEFAULT_BUILD.parts`. Reason for leaving paint alone: style is structure, paint is personal taste.
+- **Groups:** 24 numbered groups (01-07 keep the landing story order rangka, tangki, jok, stang, roda & ban, knalpot, mesin; 08-24 are the v2 categories), each in one rail section: Rangka & kaki-kaki, Mesin & knalpot, Bodi, Lampu & kelistrikan, Kokpit. Names are bengkel Indonesian with the English term in brackets.
+- **Styles (13):** cafe racer, bobber, scrambler, brat, japstyle (Indonesian definition), chopper, flat tracker, street tracker, board tracker, rat bike, streetfighter, bagger, neo retro. Each has a full preset (`PRESETS`) and a one-line blurb (`STYLE_BLURB`).
+- **Basis motor (5):** Custom, Harian 150, W175, XSR 155, Ronin (labelled 225,9cc, not 150). Picking a base swaps only the donor keys (engine, frame, fork, rear shock, wheels); a style's signature keys (`STYLE_SIGNATURE`, e.g. chopper frame and fork) win over the donor. Choosing a style on a donor uses `presetFor(style, base)`.
+- Saved configs are schema v2; v1 drafts and rows still parse and are upgraded (`upgradeV1`).
 
 ### 2.4 Paint swatches (shared by Tangki, Rangka, Aksen)
 
@@ -152,7 +105,18 @@ One persistent fixed canvas (`--z-canvas`) renders the bike behind sections 3.1 
 - End of pin: reassemble (M6).
 - Reduced motion / no WebGL: no pin; a static exploded drawing (or nothing if no WebGL) followed by the intro and all 7 captions as a list (`<ol>`), each with its label.
 
-### 3.3 Styles (`#aliran`)
+### 3.3 Styles (`#aliran`), v2: pinned horizontal walk
+
+Page order (v2): 3.1 Hero, 3.2 Breakdown, 3.3 Aliran, 3.5 Gudang part, 3.6 Motor harian, 3.4 Closing.
+
+- Every aliran comes from the catalog (`STYLES`, `STYLE_NAMES`, `PRESETS`); nothing is hardcoded, so new styles appear by themselves. Copy per card lives in `src/components/landing/copy.ts`; a style without hand-written copy shows its real preset ("Set awalnya: rangka ..., tangki ..., jok ..., stang ...") instead of invented character.
+- Pinned (`h-dvh`, ScrollTrigger `start: "top top"`, scrub 0.6): heading top-left, then a horizontal row of cards (width `min(84vw, 330px)`). Vertical scroll pans the row left (M15). The card in the left slot is the active aliran: it lifts (M16), gets a 2px ink frame and `aria-current`, and the fixed bike swaps to that preset in Cat mode (M7 pop on changed parts). A dimension-style ruler under the row fills as the walk progresses (M17), `aria-hidden`.
+- Card: H3 style name, the style copy (max 3 lines; first four styles use the v1 copy below, the rest `STYLE_BLURB`), from 640px up four preset rows (Rangka, Tangki, Jok, Stang) as a `dl`, CTA **Mulai rakit** (`aria-label` "Mulai rakit dari preset {style}") to `/garage?style={style}`.
+- Desktop: the card row runs inside the left 44% column (clipped, the next card fades out at the column edge) and the bike stays clear in the right 60% (same framing as the hero). Phone/tablet: full-width row at the bottom, the bike framed into the window between heading and cards.
+- Keyboard: Tab into an off-screen card's CTA scrolls the walk so that card sits in the active slot (focus is never on an invisible element).
+- Reduced motion / no WebGL: no pin. The v1 tabs below stay as the fallback, now listing every catalog style (2 columns, 3 from 640px).
+
+#### v1 tabs (fallback only)
 
 - Bike reassembled in 3/4 view, shown in **Cat** mode (the only place the landing shows paint, so visitors learn both modes exist). Default paint `DEFAULT_BUILD.paint`.
 - Layout desktop: tab list (4 tabs) left column, the active style's copy under it, bike right. Below 1024: tabs as a 2 x 2 grid of 44px+ buttons above the bike, copy below the bike on a plate.
@@ -175,9 +139,35 @@ One persistent fixed canvas (`--z-canvas`) renders the bike behind sections 3.1 
   - Below 640px the cells stack, CTA cell last and full width.
 - No motion beyond hover/press.
 
-### 3.5 Landing rhythm check
+### 3.5 Gudang part (`#gudang`)
 
-Four different layout families: pinned split stage (3.1), pinned stage with docked caption (3.2), tabs + model (3.3), full-width title block form (3.4). Only one eyebrow-like element (mono step labels inside 3.2, which are part numbers, not section eyebrows).
+- Purpose: the whole parts catalog in one place, and which aliran use each option as a starting part. All data is derived: groups from `GROUPS`, options from `PART_OPTIONS`, names from `OPTION_NAMES`, "Part awal aliran" from `PRESETS`. No counts, no ratings.
+- H2: **Isi gudang part.** Body: "Semua yang bisa kamu pasang di garasi, per grup. Tiap pilihan ditandai aliran mana yang memakainya dari awal."
+- Section tabs (WAI-ARIA tabs, automatic activation) from `SECTIONS` (Rangka & kaki-kaki, Mesin & knalpot, Bodi, Lampu & kelistrikan, Kokpit), wrapping chips. Inside the tab panel (a 2px ink plate) a row of group buttons for that section (`aria-pressed`, mono number + name, e.g. "01 Rangka"); opening a section selects its first group.
+- Option plates for the selected group (2 columns from 640px): option name in display 600, mono label "Part awal aliran", then the aliran names, or "Belum ada. Pasang sendiri di garasi." when no preset uses it. Groups with two keys (Roda & ban) show sub-labels from `PART_KEY_LABEL`.
+- Desktop (>= 1024): the section is transparent and sits in the left 40% (so the 3D callout plate is never covered); while it is on screen the selected group is the highlighted part on the fixed bike (accent edges and callout), so picking a group points at the part. Below 1024 the section has a solid `--paper` ground (the bike is framed elsewhere there).
+- Motion: M18 on tab change, M19 highlight.
+
+### 3.6 Motor harian (`#harian`)
+
+- Purpose: Indonesian daily custom culture. Custom is not only for old bikes; 150-class daily bikes are built up slowly.
+- H2 (two masked lines, M20): **Motor harian juga layak digambar.**
+- Body: "Custom nggak harus nunggu motor tua. Motor 150-an yang tiap hari dipakai ke kantor atau kampus juga bisa digarap pelan-pelan: jok dulu, lalu stang, knalpot, dan ban."
+- Note (ink-muted, solid paper ground): "Motor dasar ini bisa kamu pilih sebagai basis di garasi. Isi silinder sesuai spesifikasi pabrik; gambarnya tetap gambar gaya, bukan replika pabrik."
+- One sheet per donor base in the catalog (`BASES` minus `custom`), stepped like sheets laid on a table (indent i x 6% on desktop, flush on phones). Each is a small title block: `MOTOR DASAR` `BASE_NAMES` (factual base name only, no logos), `CATATAN` `BASE_NOTES` (the catalog's checked specs), and `ISI SILINDER` with a dimension line drawn to scale against the largest base (M21). The cc numbers for the line live in Landing.tsx next to a comment pointing at `BASE_NOTES`:
+
+| Base | Isi silinder |
+|---|---|
+| Harian 150 | 150 cc |
+| W175 | 177 cc |
+| XSR 155 | 155 cc |
+| Ronin | 225,9 cc |
+
+  Ronin is not 150cc (its note says so), which is why the body copy says "150-an" for the class, not for every base.
+
+### 3.7 Landing rhythm check
+
+Six layout families: pinned split stage (3.1), pinned stage with docked caption (3.2), pinned horizontal walk (3.3), tabs + plate grid beside the model (3.5), editorial split with stepped sheets (3.6), full-width title block form (3.4). Only one eyebrow-like element (mono step labels inside 3.2, which are part numbers, not section eyebrows). No FAQ, testimonials, stats or logo bars.
 
 ---
 
@@ -216,11 +206,13 @@ Every config change is written to `jac:draft:v1` (debounced 300ms). Reason: a re
 - Canvas height `calc(100dvh - 64px)`, rail same height with `overflow-y: auto`. No Lenis on this page.
 - Rail tabs: "Part" and "Cat" (WAI-ARIA tabs). Reason: keeps both groups one click away without a long scroll.
 - **Part tab:**
-  - "Aliran" radio group of 4 chips (style labels). Selecting a style applies the preset (2.3) immediately and shows an undo toast: "Preset Bobber dipasang." with button **Batalkan** (restores the previous parts), auto-dismiss after 8s, `role="status"`. Reason: undo beats a confirm dialog and never silently destroys custom picks.
+  - "Aliran" radio group of 13 chips (2 columns) with the style blurb under it, then "Basis motor" (5 chips + donor note). Selecting a style applies the preset (2.3) immediately and shows an undo toast: "Preset Bobber dipasang." with button **Batalkan** (restores the previous parts), auto-dismiss after 8s, `role="status"`. Reason: undo beats a confirm dialog and never silently destroys custom picks.
   - If the user changes any part afterwards, the style stays as chosen (the schema stores it as the declared aliran).
-  - Part groups in 2.1 order. Each group: header row with mono number + rail heading + current option name (right-aligned, ink-muted); below it a radio group of option chips (wrap). Roda & ban has two radio groups with sub-labels "Pelek" and "Ban".
+  - Below that a soft-rule status line ("Keluar pakem Cafe racer: ban Pacul (knobby). Boleh, asal disengaja.") when picks break the style's "do not include" list; the offending chip gets a dashed border and its accessible name says so.
+  - v2: the 24 groups sit in five collapsible sections (button headers with `aria-expanded`, part count, +/-): Rangka & kaki-kaki, Mesin & knalpot, Bodi, Lampu & kelistrikan, Kokpit. The section holding the active group starts open; any number can be open. Same on every breakpoint, which keeps the phone scroll short. Each group: header row with mono number + rail heading + current option name (right-aligned, ink-muted); below it a radio group of option chips (wrap). Roda & ban has two radio groups with sub-labels "Pelek" and "Ban".
   - Focusing or hovering a group (`focusin`/`pointerenter`) sets it as the **active part**: accent edges in 3D and its callout plate. Leaving the rail clears it. Reason: the user always sees which part a control drives.
 - **Cat tab:** three swatch groups "Tangki", "Rangka", "Aksen" (8 swatches + "Warna lain" each), then "Finish" radio chips Kilap / Doff / Metalik. Changing any paint switches the render to **Cat** if it was on Garis, with the toolbar toggle updating. Reason: paint picks are invisible in Garis mode.
+- **Kualitas** (garage toolbar, after the camera controls): radio group "Otomatis / Tinggi / Rendah" (arrow keys, 44px targets), drives `setQualityMode`, remembered per viewer in localStorage; wraps to its own row at 390px.
 - **Toolbar** (plate at canvas bottom-left, 16px inset): segmented "Utuh | Bongkar" (`aria-pressed` pair), segmented "Garis | Cat", camera presets as four buttons, "Reset kamera" (center-mark symbol + text). All 44px tall.
 - Canvas region: `role="img"` wrapper with `aria-label` built from the config, e.g. "Gambar 3D motor Cafe racer: rangka Double cradle, mesin Parallel twin, tangki Teardrop, jok Cafe hump, knalpot Low pipe, stang Clip-on, pelek Jari-jari, ban Street. Tampilan utuh, mode garis." The interactive canvas element inside is focusable (`tabindex="0"`) for keyboard orbit (7.2).
 
@@ -267,6 +259,28 @@ Errors (inline at the top of the form, `role="alert"`, redline style: `--paper-r
 
 The 503 `backend_not_configured` code is the backend contract for "Supabase env missing" (confirmed in src/app/api/builds). Note: `getBuild()` throws when env is missing, so `/b/[slug]` must catch that and show this state.
 
+### 4.7 Panduan (guided tour)
+
+- Purpose: first-visit orientation for the control areas, pointing at the real controls.
+- Opens automatically on the first visit, once the config is resolved and the canvas has settled (ready or failed), so it never competes with the loader. Done state: `localStorage["jac:tour:v1"] = "done"` (read and write in try/catch; blocked storage means it may show again, which is harmless). Finishing, skipping, or Escape all mark it done.
+- Reopen: **Panduan** button (44px, `btn-tool`) at the top-right of the canvas on every width.
+- Steps (targets are `data-tour` attributes, first visible match wins):
+
+| # | Target | Title | Body |
+|---|---|---|---|
+| 1 | `style` (falls back to `parts`) | Mulai dari aliran. | Pilih aliran di sini. Satu set part awal langsung terpasang, dan masih bisa dibatalkan dari notifikasi yang muncul. |
+| 2 | `parts` | Ganti part satu per satu. | Tiap grup dari rangka sampai mesin punya pilihannya sendiri. Part yang lagi kamu atur ditandai warna meni di gambar. |
+| 3 | `paint` (Cat tab on phone/desktop, Cat column on tablet) | Cat tangki, rangka, dan aksen. | Warna dan finish ada di bagian Cat. Begitu kamu pilih warna, gambarnya pindah ke mode Cat. |
+| 4 | `explode` | Utuh atau dibongkar. | Bongkar memisahkan tiap part lengkap dengan garis rakitnya, jadi kelihatan apa nempel di mana. |
+| 5 | `render` | Garis atau Cat. | Garis menampilkan gambar teknik. Cat menampilkan warna dan finish pilihanmu. |
+| 6 | `camera` (preset group, or the Kamera menu on phones) | Ganti sudut pandang. | Pilih Samping, 3/4, Depan, atau Atas. Gambarnya juga bisa digeser buat diputar. |
+| 7 | `save` | Simpan, lalu kirim link-nya. | Kasih nama build-mu, lalu salin link-nya buat bengkel langganan atau grup tongkrongan. |
+
+- Coachmark: a 2px ink frame around the target (clipped to the viewport for tall panels), a leader line with a dot from the frame to the plate (DESIGN 7.6 form), and the plate (`--paper-raised`, 2px ink, offset plate) placed below the target, else above, else docked to the bottom of the viewport. Width `min(380px, 100vw - 32px)`, 16px from every edge. It follows the target every frame (sticky canvas, rail scroll). The target is scrolled into view with `block: "nearest"` so the rail's scroll margins keep it clear of the sticky canvas.
+- Plate content: mono "Panduan 3/7" (screen readers hear "Panduan, langkah 3 dari 7"), title (h3 size), body, then buttons: **Lewati panduan** (text button, hidden on the last step), **Kembali** (from step 2), **Lanjut** / **Selesai** (solid ink, not accent). All 44px.
+- Accessibility: non-modal `role="dialog"` (`aria-modal="false"`) labelled by the title and described by the body; the page stays usable, nothing is trapped. Focus moves to the plate on open; step text sits in a polite live region so changes are announced; Escape closes (unless the native save dialog is open, which owns Escape); focus returns to the Panduan button on close.
+- If the page is hidden by Activity (navigation), the step resets.
+
 ### 4.6 3D interaction on `/garage`
 
 - Pointer: drag to orbit, wheel/pinch to zoom (limits in DESIGN 7.4). No click-to-select on meshes. Reason: selection lives in the rail where it is accessible; avoids accidental picks while orbiting.
@@ -302,6 +316,7 @@ Below 1024: canvas on top (52dvh), then title block, then BOM, full width.
 | 6.9 | Fetch error | `/b/[slug]`, `/garage?from=` | "Build belum bisa dimuat. Coba muat ulang halaman ini." with **Muat ulang** button (`router.refresh()`) | `/b` uses `error.tsx`. |
 | 6.10 | Empty | n/a | The configurator always has a full config (DEFAULT_BUILD), so there is no empty build; the only "empty" field is the build name, shown in the canvas title block as "Belum diberi nama". | |
 | 6.11 | Preset applied | `/garage` | Undo toast (4.2) | |
+| 6.13 | Opening the drawing (loader) | `/garage`, `/b/[slug]` (first load and client navigation) | Full-width sheet below the header: a side-elevation drawing drafts itself (sheet border, ground, wheels, frame, centerlines, wheelbase dimension, leader lines 01 RANGKA / 07 MESIN) above a title block `JUDUL` (Garasi, or the build name; "Build kiriman" while `/b` data loads), `SKALA` Tidak diskala, `REVISI` revision symbol, `STATUS` "Menyiapkan meja gambar..." then "Meja gambar siap." | Ends on the canvas ready/failed signal from `BikeStage`, never on a fixed timer; 900ms floor against a flash. WebGL off or context lost ends it into 6.2. The status cell is `role="status"`. It never traps focus: focus moving into the page, or any press on it, removes it at once. The header stays above it. The `/b` Suspense fallback and the stage loader share one drawing (the second resumes the first). `<noscript>` hides it. Reduced motion: drawing shown complete, 150ms fade out. Motion L1 to L4. |
 | 6.12 | Invalid custom hex | Cat tab | Field error "Format warna harus #RRGGBB, contoh #8A1F17." The previous color stays applied | |
 
 ---

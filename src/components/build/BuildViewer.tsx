@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { BuildConfig } from "@/lib/build-schema";
 import { BikeStage } from "@/components/stage/BikeStage";
 
-export function BuildViewer({ config }: { config: BuildConfig }) {
+export function BuildViewer({ config, name }: { config: BuildConfig; name: string }) {
   const [exploded, setExploded] = useState(false);
   const [painted, setPainted] = useState(false);
   return (
@@ -17,6 +17,7 @@ export function BuildViewer({ config }: { config: BuildConfig }) {
       onPainted={setPainted}
       highlight={null}
       failTail="Daftar part di bawah tetap lengkap."
+      loaderTitle={name}
     />
   );
 }

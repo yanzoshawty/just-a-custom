@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BuildConfigSchema, DEFAULT_BUILD, type BuildConfig, type PartKey, type SavedBuild } from "@/lib/build-schema";
-import { PRESETS, STYLE_NAMES, STYLES, type Finish, type GroupId, type Style } from "@/lib/catalog";
+import { PRESETS, STYLE_NAMES, STYLES, partsForBase, presetFor, type Base, type Finish, type GroupId, type Style } from "@/lib/catalog";
 import { Header } from "@/components/site/Header";
 import { DeltaSymbol } from "@/components/site/Symbols";
 import { BikeStage } from "@/components/stage/BikeStage";
 import { PaintPanel, PartsPanel } from "./Rail";
 import { SaveDialog } from "./SaveDialog";
+import { QualityToggle } from "./QualityToggle";
+import { Tour, tourDone } from "@/components/tour/Tour";
 
 const DRAFT_KEY = "jac:draft:v1";
 const SLUG_RE = /^[0-9a-z]{10}$/;
@@ -42,6 +44,13 @@ export function GarageApp() {
   const saveBtn = useRef<HTMLButtonElement>(null);
   const rail = useRef<HTMLDivElement>(null);
   const hovering = useRef(false);
+  const tourBtn = useRef<HTMLButtonElement>(null);
+  const [stageSettled, setStageSettled] = useState(false);
+  const settle = useCallback(() => setStageSettled(true), []);
+  // null until the user opens or closes it; first visit opens it once the canvas has settled
+  // (ready or failed), so the tour never competes with the loader.
+  const [tourChoice, setTourOpen] = useState<boolean | null>(null);
+  const tourOpen = tourChoice ?? (resolved && stageSettled && !tourDone());
 
   // UX-SPEC 4.1: ?from=<slug>, then ?style=, then the draft, then DEFAULT_BUILD.
   useEffect(() => {
@@ -87,8 +96,10 @@ export function GarageApp() {
   const applyStyle = (style: Style) => {
     if (style === config.style) return;
     setToast({ style, prev: config });
-    setConfig({ ...config, style, parts: { ...PRESETS[style] } });
+    setConfig({ ...config, style, parts: presetFor(style, config.base) });
   };
+  // basis motor: swaps the donor's engine, frame and running gear, keeps everything else
+  const setBase = (base: Base) => setConfig((c) => ({ ...c, base, parts: partsForBase(c.parts, c.style, base) }));
   const setPart = (k: PartKey, v: string) => setConfig((c) => ({ ...c, parts: { ...c.parts, [k]: v } }));
   const setPaint = (k: "tank" | "frame" | "accent", hex: string) => {
     setConfig((c) => ({ ...c, paint: { ...c.paint, [k]: hex } }));
@@ -128,7 +139,7 @@ export function GarageApp() {
         skipLabel="Langsung ke konfigurator"
         skipTarget="konfigurator"
         action={
-          <button ref={saveBtn} type="button" className="btn-primary min-h-11 px-3 sm:px-5" onClick={() => setSaveOpen(true)}>
+          <button ref={saveBtn} data-tour="save" type="button" className="btn-primary min-h-11 px-3 sm:px-5" onClick={() => setSaveOpen(true)}>
             <span className="sm:hidden">Simpan</span>
             <span className="hidden sm:inline">Simpan &amp; bagikan</span>
           </button>
@@ -145,7 +156,24 @@ export function GarageApp() {
           onPainted={setPainted}
           highlight={active}
           failTail="Pilihan part dan cat tetap bisa diatur dan disimpan."
-          overlay={<CanvasTitle config={config} name={lastName} />}
+          loaderTitle="Garasi"
+          onSettled={settle}
+          tools={<QualityToggle />}
+          overlay={
+            <>
+              <CanvasTitle config={config} name={lastName} />
+              <button
+                ref={tourBtn}
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={tourOpen}
+                className="btn-tool absolute top-2 right-2 z-10 border-ink sm:top-4 sm:right-4"
+                onClick={() => setTourOpen(true)}
+              >
+                Panduan
+              </button>
+            </>
+          }
         />
 
         <div
@@ -169,6 +197,7 @@ export function GarageApp() {
                 id={`${tabId}-${t.id}`}
                 type="button"
                 role="tab"
+                data-tour={t.id === "cat" ? "paint" : undefined}
                 aria-selected={tab === t.id}
                 aria-controls={`${tabId}-${t.id}-panel`}
                 tabIndex={tab === t.id ? 0 : -1}
@@ -182,6 +211,7 @@ export function GarageApp() {
           <div className="p-4 sm:grid sm:grid-cols-2 sm:gap-8 sm:p-6 lg:block">
             <div
               id={`${tabId}-part-panel`}
+              data-tour="parts"
               role="tabpanel"
               aria-labelledby={`${tabId}-part`}
               className={tab === "part" ? "" : "max-sm:hidden lg:hidden"}
@@ -189,6 +219,7 @@ export function GarageApp() {
               <PartsPanel
                 config={config}
                 onStyle={applyStyle}
+                onBase={setBase}
                 onPart={setPart}
                 onActive={setActive}
                 open={open}
@@ -197,6 +228,7 @@ export function GarageApp() {
             </div>
             <div
               id={`${tabId}-cat-panel`}
+              data-tour="paint"
               role="tabpanel"
               aria-labelledby={`${tabId}-cat`}
               className={tab === "cat" ? "" : "max-sm:hidden lg:hidden"}
@@ -218,6 +250,14 @@ export function GarageApp() {
           onDone={() => setToast(null)}
         />
       )}
+
+      <Tour
+        open={tourOpen}
+        onClose={() => {
+          setTourOpen(false);
+          tourBtn.current?.focus();
+        }}
+      />
 
       <SaveDialog
         open={saveOpen}

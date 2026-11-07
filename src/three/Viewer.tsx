@@ -5,11 +5,12 @@ import * as THREE from "three";
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentRef } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { useQuality } from "./stage-store";
 import gsap from "gsap";
 import type { BuildConfig } from "@/lib/build-schema";
 import type { GroupId } from "@/lib/catalog";
-import { Bike, BIKE_DPR, type BikeMode } from "./bike/Bike";
-import { Lights } from "./Scene";
+import { Bike, type BikeMode } from "./bike/Bike";
+import { Lights, Quality, exposeDebug } from "./Scene";
 
 export type Preset = "samping" | "34" | "depan" | "atas";
 export type ViewerApi = {
@@ -46,21 +47,25 @@ export type ViewerProps = {
 
 export default function Viewer(props: ViewerProps) {
   const { onReady, onLost } = props;
+  const { dpr } = useQuality();
   return (
     <Canvas
       frameloop="demand"
-      dpr={BIKE_DPR}
+      dpr={dpr}
       gl={{ alpha: true, antialias: true }}
       camera={{ fov: 24, near: 0.1, far: 60, position: PRESETS.samping }}
-      onCreated={({ gl }) => {
+      onCreated={(state) => {
+        const { gl } = state;
         gl.domElement.addEventListener("webglcontextlost", (e) => {
           e.preventDefault();
           onLost();
         });
+        exposeDebug(state);
         onReady();
       }}
       style={{ touchAction: "none" }}
     >
+      <Quality />
       <Lights />
       <Rig {...props} />
     </Canvas>

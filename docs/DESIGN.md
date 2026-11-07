@@ -246,42 +246,19 @@ Reason: these are notation, not a glyph set; they come from the brand's own draf
 
 The bike is built procedurally from Three.js primitives. Lean into that: it is a **technical drawing that happens to be 3D**, not a failed photoreal render.
 
-### 7.1 Units, axes, anchors
+### 7.1 Units, axes, anchors (v2)
 
-- 1 unit is roughly 1 meter. Bike faces **+X** (front wheel at +X), up is **+Y**, the rider's left side faces **+Z** (towards the default camera). Origin: on the ground, midway between axles.
-- Reference proportions (modelling guide, never displayed as specs): wheel outer radius 0.33, axles at x = -0.70 and +0.70, y = 0.33; seat top around y = 0.80; tank top around y = 0.95; overall length about 2.1, width about 0.75.
-- Each part is a `<group name="<partKey>">` with a `home` position and an `explode` offset (7.5) and a named anchor `Object3D` used for its callout leader.
-- Fixed, non-configurable parts (fork, headlight, rear fender, swingarm, battery box) belong to the `frame` group so they travel with it. Reason: the schema has 8 slots; everything else is "rangka" in bengkel terms.
+- 1 unit is roughly 1 meter. Bike faces **+X**, up is **+Y**, the rider's left (+Z) faces the default camera, so chain, exhaust and kick lever sit on +Z on purpose. Origin: ground, midway between axles.
+- **Rig** (`src/three/bike/rig.ts`): every style sets six dials from the report's per-style table: wheelbase, neck rake, wheel/tire sizes (rim inch, section, aspect), seat height, top-clamp height, stance, tail overhang/rise. A donor **base** (harian-150, w175, xsr155, ronin) replaces wheelbase and 17 in wheels with the donor's spec-sheet values (unless the style's signature keeps its own wheels) and scales the engine down. The rig derives the fork axis, clamps, steering head, pivot, seat rail and tail; every recipe places itself from those points, never from fixed coordinates. Bikes longer than 2.3 units are scaled down so the camera framing still fits (chopper, bagger).
+- Each category is one part group (`PartGroup`) with an explode offset; the front/rear rim and tire are four groups that share the "Roda & ban" callout.
 
-### 7.2 Part modelling notes (per schema option id)
+### 7.2 Part modelling (v2)
 
-| Part | Option id | Primitive recipe |
-|---|---|---|
-| frame | `cradle` | Double downtube loop under the engine: two `TubeGeometry` paths (CatmullRom), tube radius 0.018, plus rear subframe and shock cylinders. |
-| frame | `trellis` | Straight tubes forming visible triangles from headstock to swingarm pivot (8 to 12 `CylinderGeometry` segments), radius 0.014. |
-| frame | `hardtail` | Rigid rear triangle, no shock, rear axle bolted to frame; lower seat rail. |
-| engine | `single` | One upright cylinder (stack of 6 thin `CylinderGeometry` fins) on a rounded-box crankcase. |
-| engine | `parallel-twin` | Two upright finned cylinders side by side (offset in Z) on a wider crankcase. |
-| engine | `v-twin` | Two finned cylinders splayed 45 degrees each way in the XY plane, sharing one crankcase. |
-| tank | `teardrop` | `LatheGeometry` ellipsoid scaled long in X, tapering to the rear. |
-| tank | `peanut` | Narrow lathe ellipsoid, scaled thin in Z, sits higher. |
-| tank | `flat-box` | `RoundedBox` (drei), small radius, flat top. |
-| seat | `cafe-hump` | Flat pad box plus a wedge hump at the rear (cafe cowl). |
-| seat | `bobber-solo` | Small pad over two helix springs (`TubeGeometry` on a helix curve). |
-| seat | `brat-flat` | Long thin flat box running from tank to rear end. |
-| exhaust | `low-pipe` | Tube from head, under the engine, to a cylinder muffler at axle height. |
-| exhaust | `high-scrambler` | Tube rising along the side to seat height, perforated heat shield (a half-cylinder shell). |
-| exhaust | `fishtail` | Low tube ending in a flattened cone (scaled `ConeGeometry`). |
-| handlebar | `clip-on` | Two short bars clamped low on the fork tubes, angled down. |
-| handlebar | `drag` | Straight bar on short risers. |
-| handlebar | `tracker` | Wide bar with a bend and a crossbrace. |
-| wheels | `spoke` | Rim `TorusGeometry` + hub + 36 thin spokes (`InstancedMesh`). |
-| wheels | `cast` | Rim + 6 thick box spokes. |
-| wheels | `disc` | Rim + full flat cylinder cover each side. |
-| tires | `street` | Smooth torus around the rim. |
-| tires | `knobby` | Torus plus an `InstancedMesh` ring of small boxes (ban pacul). |
-
-Keep total triangles under about 150k. Reason: mid-range Android phones must hold 60fps while scrubbing.
+- Recipes live in `src/three/bike/recipes.ts`, one function per category; option ids and names are in `src/lib/catalog.ts`. Every option produces its own geometry (25 categories, 151 options). Silhouette rules from the report drive the defaults: cafe tank top and seat base level, japstyle tank highest point over a thin flat seat, chopper rake 38+ with long forks, streetfighter tail kicked high, bagger one painted mass from batwing to bags.
+- **Kit** (`kit.ts`): recipes push primitives (rod, tube, lathe, loft, extrude with 1-2 bevel segments, sector shells for fenders) into a Kit that merges them **per material slot**: one draw call per slot per part, spokes, fins, tread blocks and bolts included. Line mode merges all fill pieces into one mesh plus one ink mesh, one silhouette hull and one fat-line edge set per part.
+- Slots: paint `tank` / `frame` / `accent`; fixed `chrome`, `alloy` (brushed), `engine`, `black` (powder coat), `rubber`, `leather`, `lens`, `lamp`, `red`, `amber`, `plate` (number boards, whitewalls).
+- Soft style rules: `CLASHES` in catalog.ts encodes each style's "do not include" list. The rail warns ("Keluar pakem ...") and dashes the chip border; nothing is blocked, so hybrids (brat tracker) stay possible. Presets are tested to never clash with their own style.
+- Budget: Low tier under ~100 draw calls; measured 70-85 per bike (see 7.7).
 
 ### 7.3 Render modes
 
@@ -303,7 +280,8 @@ Two modes, user-switchable (labels: **Garis** = blueprint line drawing, **Cat** 
 - Fixed materials (not user paint, real-world material colors): chrome (exhaust, handlebar, spokes, fork tubes) `#C8CDD0` metalness 1 roughness 0.2; engine block `#4A4E52` metalness 0.6 roughness 0.45; seat `#2B2B2B` roughness 0.7; tires `#1B1B1B` roughness 0.9.
 - Edges stay on at `--ink`, opacity 0.18. Reason: the drawing is still visible under the paint, so both modes feel like one brand.
 - Lighting: `hemisphereLight` (sky `#FFFFFF`, ground `#1A2430`, 0.5); key `directionalLight` at (3, 4, 2) intensity 2.0; rim at (-3, 2, -2) intensity 0.8. Reflections from drei `<Environment resolution={256} frames={1}>` built only from local `<Lightformer>`s: one long thin rectangle overhead like a bengkel TL tube lamp (`form="rect"`, intensity 2, scale [4, 0.15], y = 3), two dim side panels (intensity 0.6). No HDR preset download. Reason: no network fetch for the scene, and the TL-tube reflection streak is the bengkel look.
-- drei `<ContactShadows>` under the bike: opacity 0.35 (Kalkir) / 0.5 (Blueprint), blur 2.5, far 1, color `--ink`.
+- drei `<ContactShadows>` under the bike: opacity 0.38 (Kalkir) / 0.5 (Blueprint), blur 2.4, far 1, color `--ink`. Low tier bakes it once per build (`frames={1}`); High re-renders it so exploded parts lift off.
+- v2 PBR (`materials.ts`): finishes `gloss`, `matte`, `metal`, `candy` (metal 0.9 under clearcoat), `flake` (generated noise normal map on the base layer only, High tier), `satin`, `patina` (generated rust blotches multiplied over the paint, roughness 0.92). Fixed: chrome metal 1 / rough 0.1; brushed alloy with anisotropy 0.75 (High); leather with sheen 0.35 (High); lens transparent 0.38; lamp and taillight emissive. The environment is generated from Lightformers inside a dim room shell (no HDR file, nothing from a CDN: the CSP blocks drei presets).
 
 Theme changes recolor the scene in the same frame: read tokens with `getComputedStyle(document.documentElement)` on mount and whenever `data-theme` or the `prefers-color-scheme` media query changes.
 
@@ -349,6 +327,16 @@ Order is the story order and the part-number order. Offsets are added to each gr
 - Desktop shows all labels in exploded view; below 768px only the active part's label. Reason: eight plates on a 375px canvas collide.
 - Labels are `aria-hidden="true"` and `pointer-events: none`; the same information is in the control rail / caption text. Reason: one accessible source, no duplicate tab stops.
 
+### 7.7 Quality tiers
+
+| Tier | When | Settings |
+|---|---|---|
+| High | default on desktop | DPR [1, 2], MeshPhysicalMaterial clearcoat paint, anisotropic alloy, env 512, live contact shadow, faint painted-mode outlines |
+| Low | phones with coarse pointer and small screen, <=4 GB / <=4 cores, PerformanceMonitor decline, WebGL context lost, or user pick | DPR [1, 1.25], MeshStandardMaterial only, ~60% segment counts, env 128, contact shadow baked once, no painted-mode outlines |
+| Fallback | no WebGL | existing CanvasFailed plate; part list stays usable |
+
+State lives in `src/three/stage-store.ts`: `useQuality()` returns `{ mode, tier, dpr }`, `setQualityMode("auto" | "high" | "low")` is the hook for the frontend's toggle (persisted in `localStorage["jac:quality"]`), `reportSlow()` is what the monitor calls. `localStorage["jac:debug3d"] = "1"` exposes `window.__jac3d` (R3F state) for renderer.info checks.
+
 ## 8. Motion spec
 
 Global: GSAP + ScrollTrigger (`@gsap/react` `useGSAP` for cleanup), Lenis on the landing only. Default UI ease `power3.out` (CSS equivalent `cubic-bezier(0.16, 1, 0.3, 1)`); scroll-scrubbed tweens use `ease: "none"` because the scroll position is the easing. Animate only `transform`, `opacity`, and 3D object transforms/uniforms.
@@ -373,12 +361,27 @@ Reduced motion is checked with `gsap.matchMedia()` (`"(prefers-reduced-motion: r
 | M12 | Primary button press | `:active` | `translate(2px,2px)` and plate 4px to 2px | 80ms `ease-out` | Physical press feedback | Same (non-motion state change, kept) |
 | M13 | Dialog open / close | Open / close | Opacity 0 to 1, y 8px to 0; scrim fades | 200ms `power3.out` / 150ms | Shows arrival of a layer above the drawing | Opacity only, 0ms |
 | M14 | Theme switch | Toggle | None, instant | 0ms | Avoids a half-themed frame mid-scroll; 3D recolors in the same frame | Same |
+| M15 | Aliran walk (landing v2) | ScrollTrigger on `#aliran`, `start: "top top"`, `end: +=max(1.15 x track travel, 2 x viewport)`, `pin: true`, `scrub: 0.6` | Card row `x` from 0 to minus the distance between the first and last card | Scroll-mapped, `ease: "none"` | Storytelling: the visitor walks past every aliran in the catalog and the bike changes with each one | No pin; v1 tabs |
+| M16 | Active aliran card | Card enters the left slot (index from M15 progress) | Card `translateY(-10px)` + 2px ink frame; bike swaps preset (M7 pop on changed parts) | 300ms `cubic-bezier(0.16, 1, 0.3, 1)` | Hierarchy: one card is clearly the one on the drawing | Instant |
+| M17 | Aliran ruler | Same timeline as M15 | Fill `scaleX` 1/n to 1 | Scroll-mapped | Shows how much of the catalog is left without a counter | Not rendered |
+| M18 | Gudang tab change | Tab selected | Option plates `y` 14px to 0, opacity 0 to 1, stagger 50ms | 350ms `power3.out` | State transition: the new shelf is set down, so the swap reads as new content | Instant |
+| M19 | Gudang highlight (desktop) | `#gudang` between 55% and 45% of the viewport | Selected group becomes the highlighted part on the fixed bike | Instant (3D highlight) | Points from the list to the real part | Same (no motion involved) |
+| M20 | Motor harian headline | `#harian` top hits 70%, once | Two lines rise out of their masks, `yPercent` 105 to 0, stagger 120ms | 800ms `power3.out` | The one loud beat that marks the switch from catalog to culture | Static |
+| M21 | Base sheets | Each sheet top hits 85% (once) / 80% to 45% (scrub) | Sheet `x` 48px to 0 + fade; displacement dimension line `scaleX` 0 to 1 | 600ms `power3.out` / scroll-mapped | Sheets laid on the table, then each spec is drafted to scale so the size difference is read, not just stated | Static, lines drawn |
+| M22 | Closing title block | `#garasi` top hits 70%, once | Cells fade in, `y` 8px to 0, stagger 80ms | 350ms `power3.out` | Echoes the loader's title block filling in: the sheet is complete, sign it | Static |
+| M23 | Tour coachmark | Step change | Frame and plate glide to the next target (transform, width, height), leader line redraws with `stroke-dashoffset` after the glide | 380ms `cubic-bezier(0.16, 1, 0.3, 1)` + 260ms | Keeps the eye travelling from one control to the next instead of a jump cut | Instant cut, line shown |
+| L1 | Loader sheet (`/garage`, `/b`) | Mount | Sheet border, ground line, wheels, frame/tank/seat/fork/engine/exhaust/bar draw in with `stroke-dashoffset` (`pathLength=1`), staggered | 0.5 to 1.2s `power2.out` | Says "the drawing is being drafted" while the canvas starts, in the brand's notation | Drawn complete |
+| L2 | Loader annotation | After L1 | Centerlines, wheelbase dimension, arrowheads, leaders and labels; title block cells fade in, `y` 6px to 0 | about 0.9s, `power3.out` | Fills the title block like a real sheet; status text is the live region | Shown complete |
+| L3 | Loader finish | Canvas ready or failed (900ms floor) | Remaining drawing plays at 3x | Rest of the timeline / 3 | Real signal, never a fake timer; no half-drawn sheet left behind | Skipped |
+| L4 | Loader lift | After L3, or focus/press (skip) | Sheet `opacity` 1 to 0, `y` 0 to -16px, then removed | 350ms `power2.in` | The paper lifts off and the live 3D drawing is underneath | Opacity only, 150ms |
 
-No endless loops, no floating, no bounce, no parallax beyond M4. Reason: every motion above maps to a story beat or a state change.
+`stroke-dashoffset` (L1, L2, M23 leader) is the one paint property animated on purpose: a few SVG strokes, the owner asked for drawn lines. Everything else is transform/opacity. M23's width/height glide runs only during the 380ms step change on one empty frame element.
+
+No endless loops, no floating, no bounce, no parallax beyond M4 and M15. Reason: every motion above maps to a story beat or a state change.
 
 ## 9. Z-index scale
 
-`--z-canvas: 0` (fixed landing stage), `--z-content: 10`, `--z-header: 20`, `--z-toast: 30`, `--z-dialog: 40`. Reason: systemic layers only, no arbitrary 9999.
+`--z-canvas: 0` (fixed landing stage), `--z-content: 10`, loader sheet 15 (below the header, so navigation and the theme button stay reachable), `--z-header: 20`, `--z-toast: 30` (also the tour frame and plate), `--z-dialog: 40`. Reason: systemic layers only, no arbitrary 9999.
 
 ## 10. Logo usage
 

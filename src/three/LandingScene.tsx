@@ -9,10 +9,10 @@ import { Line } from "@react-three/drei";
 import { ScreenLabel } from "./ScreenLabel";
 import type { BuildConfig } from "@/lib/build-schema";
 import type { GroupId } from "@/lib/catalog";
-import { Bike, BIKE_DPR, type BikeMode } from "./bike/Bike";
-import { Lights } from "./Scene";
+import { Bike, type BikeMode } from "./bike/Bike";
+import { Lights, Quality, exposeDebug } from "./Scene";
 import { useThemeTokens } from "./tokens";
-import { stage as store } from "./stage-store";
+import { stage as store, useQuality } from "./stage-store";
 
 type Props = {
   config: BuildConfig;
@@ -25,20 +25,24 @@ type Props = {
 };
 
 export default function LandingScene({ onReady, onLost, ...props }: Props) {
+  const { dpr } = useQuality();
   return (
     <Canvas
       frameloop="demand"
-      dpr={BIKE_DPR}
+      dpr={dpr}
       gl={{ alpha: true, antialias: true }}
       camera={{ fov: 24, near: 0.1, far: 80, position: [0, 0.55, 6.2] }}
-      onCreated={({ gl }) => {
+      onCreated={(state) => {
+        const { gl } = state;
         gl.domElement.addEventListener("webglcontextlost", (e) => {
           e.preventDefault();
           onLost();
         });
+        exposeDebug(state);
         onReady();
       }}
     >
+      <Quality />
       <Lights />
       <Rig />
       <Bike

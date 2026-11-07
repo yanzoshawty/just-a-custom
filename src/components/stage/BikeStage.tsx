@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode 
 import type { BuildConfig } from "@/lib/build-schema";
 import { describeBuild, type GroupId } from "@/lib/catalog";
 import { CenterMark } from "@/components/site/Symbols";
+import { DraftLoader } from "@/components/transition/DraftLoader";
 import { CanvasFailed, CanvasLoading, GLBoundary, useWebGL } from "@/three/shell";
 import { useMedia, useReducedMotion } from "@/three/tokens";
 import type { Preset, ViewerApi } from "@/three/Viewer";
@@ -29,9 +30,15 @@ type Props = {
   /** Top-left overlay (garage title block). */
   overlay?: ReactNode;
   className?: string;
+  /** JUDUL of the drafting loader shown until the canvas is ready (L1 to L4) */
+  loaderTitle: string;
+  /** once the canvas is ready or has failed */
+  onSettled?: () => void;
+  /** Extra toolbar controls (garage: render quality). */
+  tools?: ReactNode;
 };
 
-export function BikeStage({ config, exploded, onExploded, painted, onPainted, highlight, failTail, overlay, className = "" }: Props) {
+export function BikeStage({ config, exploded, onExploded, painted, onPainted, highlight, failTail, overlay, className = "", loaderTitle, onSettled, tools }: Props) {
   const api = useRef<ViewerApi | null>(null);
   const webgl = useWebGL();
   const reduce = useReducedMotion();
@@ -40,6 +47,12 @@ export function BikeStage({ config, exploded, onExploded, painted, onPainted, hi
   const [failed, setFailed] = useState(false);
   const hintId = useId();
   const broken = webgl === false || failed;
+  const settled = ready || broken;
+  const [loaderGone, setLoaderGone] = useState(false);
+  // settled for the page = canvas ready/failed AND the loader sheet lifted, so nothing opens under it
+  useEffect(() => {
+    if (settled && loaderGone) onSettled?.();
+  }, [settled, loaderGone, onSettled]);
 
   // UX-SPEC 7.2 canvas keys; only handled keys are prevented.
   function onKey(e: KeyboardEvent) {
@@ -79,6 +92,7 @@ export function BikeStage({ config, exploded, onExploded, painted, onPainted, hi
         onPreset={(p) => api.current?.preset(p)}
         onReset={() => api.current?.reset()}
         disabled={broken}
+        tools={tools}
       />
       <div
         role="img"
@@ -107,7 +121,8 @@ export function BikeStage({ config, exploded, onExploded, painted, onPainted, hi
       <span id={hintId} className="sr-only">
         Panah untuk memutar, plus dan minus untuk zoom, angka 1 sampai 4 untuk sudut pandang.
       </span>
-      {broken ? <CanvasFailed tail={failTail} /> : !ready && <CanvasLoading />}
+      {broken ? <CanvasFailed tail={failTail} /> : !ready && loaderGone && <CanvasLoading />}
+      {!loaderGone && <DraftLoader done={settled} title={loaderTitle} onGone={() => setLoaderGone(true)} />}
     </div>
   );
 }
@@ -120,6 +135,7 @@ function Toolbar({
   onPreset,
   onReset,
   disabled,
+  tools,
 }: {
   exploded: boolean;
   onExploded: (v: boolean) => void;
@@ -128,10 +144,11 @@ function Toolbar({
   onPreset: (p: Preset) => void;
   onReset: () => void;
   disabled: boolean;
+  tools?: ReactNode;
 }) {
   return (
     <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex flex-wrap items-end gap-2 sm:inset-x-4 sm:bottom-4 [&>*]:pointer-events-auto">
-      <div className="flex border border-ink bg-paper-raised" role="group" aria-label="Tampilan">
+      <div data-tour="explode" className="flex border border-ink bg-paper-raised" role="group" aria-label="Tampilan">
         <button type="button" className="btn-tool border-0" aria-pressed={!exploded} onClick={() => onExploded(false)}>
           Utuh
         </button>
@@ -139,7 +156,7 @@ function Toolbar({
           Bongkar
         </button>
       </div>
-      <div className="flex border border-ink bg-paper-raised" role="group" aria-label="Mode gambar">
+      <div data-tour="render" className="flex border border-ink bg-paper-raised" role="group" aria-label="Mode gambar">
         <button type="button" className="btn-tool border-0" aria-pressed={!painted} onClick={() => onPainted(false)}>
           Garis
         </button>
@@ -149,7 +166,7 @@ function Toolbar({
       </div>
       {!disabled && (
         <>
-          <div className="hidden gap-1 border border-ink bg-paper-raised sm:flex" role="group" aria-label="Sudut pandang">
+          <div data-tour="camera" className="hidden gap-1 border border-ink bg-paper-raised sm:flex" role="group" aria-label="Sudut pandang">
             {PRESET_LABELS.map((p) => (
               <button key={p.id} type="button" className="btn-tool border-0" onClick={() => onPreset(p.id)}>
                 {p.label}
@@ -161,6 +178,7 @@ function Toolbar({
             Reset kamera
           </button>
           <CameraMenu onPreset={onPreset} onReset={onReset} />
+          {tools}
         </>
       )}
     </div>
@@ -209,7 +227,7 @@ function CameraMenu({ onPreset, onReset }: { onPreset: (p: Preset) => void; onRe
   }
 
   return (
-    <div className="relative sm:hidden">
+    <div data-tour="camera" className="relative sm:hidden">
       <button
         ref={btn}
         type="button"

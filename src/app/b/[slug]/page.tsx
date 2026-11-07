@@ -6,13 +6,14 @@ import { z } from "zod";
 import type { SavedBuild } from "@/lib/build-schema";
 import { getBuild } from "@/lib/builds";
 import { BackendNotConfiguredError } from "@/lib/supabase/server";
-import { FINISH_NAMES, GROUPS, OPTION_NAMES, STYLE_NAMES, swatchName } from "@/lib/catalog";
+import { FINISH_NAMES, STYLE_NAMES, specRows, swatchName } from "@/lib/catalog";
 import { BuildViewer } from "@/components/build/BuildViewer";
 import { Footer } from "@/components/site/Footer";
 import { Header } from "@/components/site/Header";
 import { SheetMessage } from "@/components/site/SheetMessage";
 import { DeltaSymbol } from "@/components/site/Symbols";
 import { CopyLink } from "@/components/ui/CopyLink";
+import { DraftLoader } from "@/components/transition/DraftLoader";
 
 type Loaded = { kind: "ok"; build: SavedBuild } | { kind: "missing" } | { kind: "backend" } | { kind: "corrupt" };
 
@@ -50,13 +51,8 @@ export default function BuildPage({ params }: PageProps<"/b/[slug]">) {
     <>
       <Header page="build" skipLabel="Langsung ke isi" skipTarget="isi" />
       <main id="isi" tabIndex={-1} className="flex-1">
-        <Suspense
-          fallback={
-            <p role="status" className="t-data mx-auto my-24 w-fit bg-paper-raised px-2 py-1">
-              Menyiapkan meja gambar...
-            </p>
-          }
-        >
+        {/* the stage's own loader resumes this drawing once the build arrives */}
+        <Suspense fallback={<DraftLoader done={false} title="Build kiriman" />}>
           <BuildContent params={params} />
         </Suspense>
       </main>
@@ -80,13 +76,8 @@ const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: 
 
 function BuildSheet({ build }: { build: SavedBuild }) {
   const { config } = build;
-  const rows = GROUPS.flatMap((g) =>
-    g.keys.map((k) => ({
-      no: `JAC-${g.no}`,
-      part: g.keys.length > 1 ? (k === "wheels" ? "Pelek" : "Ban") : g.heading.split(" (")[0],
-      choice: OPTION_NAMES[config.parts[k]],
-    })),
-  );
+  // data-driven from catalog GROUPS (plus the base row), so new categories need no page edit
+  const rows = specRows(config);
   const paints = [
     { part: "Tangki", hex: config.paint.tank },
     { part: "Rangka", hex: config.paint.frame },
@@ -98,7 +89,7 @@ function BuildSheet({ build }: { build: SavedBuild }) {
   return (
     <div className="mx-auto grid max-w-[1320px] gap-8 px-gutter py-6 lg:grid-cols-12 lg:py-10">
       <div className="lg:col-span-7">
-        <BuildViewer config={config} />
+        <BuildViewer config={config} name={build.name} />
       </div>
       <div className="flex flex-col gap-8 lg:col-span-5">
         <div className="grid grid-cols-2 border-2 border-ink bg-paper-raised">
